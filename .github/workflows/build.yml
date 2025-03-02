@@ -37,12 +37,14 @@ jobs:
 
       - name: Download containerd binaries
         run: |
-          go run scripts/download_containerd.go
+          cd fun
+          go run ../scripts/download_containerd.go
 
       - name: Prepare Windows scripts
         run: |
+          cd fun
           # Make sure the line endings for Windows scripts are CRLF
-          foreach ($file in Get-ChildItem -Path fun/scripts/windows -File -Filter *.cmd) {
+          foreach ($file in Get-ChildItem -Path scripts/windows -File -Filter *.cmd) {
             $content = Get-Content -Path $file.FullName -Raw
             $content = $content.Replace("`n", "`r`n")
             Set-Content -Path $file.FullName -Value $content -NoNewline
@@ -51,17 +53,18 @@ jobs:
       - name: Build with PowerShell script
         shell: pwsh
         run: |
+          cd fun
           if ($env:GITHUB_REF.StartsWith("refs/tags/v")) {
-            ./fun/build.ps1 -Release
+            ./build.ps1 -Release
           } else {
-            ./fun/build.ps1 -Snapshot
+            ./build.ps1 -Snapshot
           }
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-artifacts
-          path: dist/
+          path: fun/dist/
           retention-days: 5
 
   build-macos:
@@ -86,26 +89,29 @@ jobs:
 
       - name: Download containerd binaries
         run: |
-          go run scripts/download_containerd.go
+          cd fun
+          go run ../scripts/download_containerd.go
 
       - name: Make scripts executable
         run: |
-          chmod +x fun/scripts/macos/*
+          cd fun
+          chmod +x scripts/macos/*
           
       - name: Build with shell script
         run: |
-          chmod +x ./fun/build.sh
+          cd fun
+          chmod +x ./build.sh
           if [[ $GITHUB_REF == refs/tags/v* ]]; then
-            ./fun/build.sh --release
+            ./build.sh --release
           else
-            ./fun/build.sh --snapshot
+            ./build.sh --snapshot
           fi
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-artifacts
-          path: dist/
+          path: fun/dist/
           retention-days: 5
 
   build-linux:
@@ -135,26 +141,29 @@ jobs:
 
       - name: Download containerd binaries
         run: |
-          go run scripts/download_containerd.go
+          cd fun
+          go run ../scripts/download_containerd.go
 
       - name: Make scripts executable
         run: |
-          chmod +x fun/scripts/*.sh
+          cd fun
+          chmod +x scripts/*.sh
 
       - name: Build with shell script
         run: |
-          chmod +x ./fun/build.sh
+          cd fun
+          chmod +x ./build.sh
           if [[ $GITHUB_REF == refs/tags/v* ]]; then
-            ./fun/build.sh --release
+            ./build.sh --release
           else
-            ./fun/build.sh --snapshot
+            ./build.sh --snapshot
           fi
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-artifacts
-          path: dist/
+          path: fun/dist/
           retention-days: 5
 
   create-release:
