@@ -1,6 +1,8 @@
 # funserver
 The runtime for self-hosting funserver compatible apps. Self host server software as easily as installing apps on your phone. This is a monorepo, where all core applications live.
 
+WORK IN PROGRESSS -- Doesn't actually work yet, but #buildinpublic
+
 ## Installation
 
 Funserver is a cross-platform application that can be installed on macOS, Windows, and Linux.
