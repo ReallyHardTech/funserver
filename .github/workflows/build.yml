@@ -40,6 +40,11 @@ jobs:
           cd fun
           go run ../scripts/download_containerd.go
 
+      - name: Update Go dependencies
+        run: |
+          cd fun
+          go mod tidy
+
       - name: Prepare Windows scripts
         run: |
           cd fun
@@ -92,6 +97,11 @@ jobs:
           cd fun
           go run ../scripts/download_containerd.go
 
+      - name: Update Go dependencies
+        run: |
+          cd fun
+          go mod tidy
+
       - name: Make scripts executable
         run: |
           cd fun
@@ -143,6 +153,11 @@ jobs:
         run: |
           cd fun
           go run ../scripts/download_containerd.go
+
+      - name: Update Go dependencies
+        run: |
+          cd fun
+          go mod tidy
 
       - name: Make scripts executable
         run: |
