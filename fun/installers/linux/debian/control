@@ -1,0 +1,16 @@
+Package: fun
+Version: VERSION
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: docker.io | docker-ce | docker-ee, systemd
+Maintainer: Fun Server Team <support@thefunserver.com>
+Description: Fun Server
+ Fun Server manages your local funserver installation, allowing you to install
+ and manage compatible applications seamlessly. It supports installation on
+ macOS, Windows, and Linux.
+ .
+ Features:
+  * Manage your local funserver installation
+  * Install and manage compatible applications
+  * Cross-platform support (macOS, Windows, Linux) 

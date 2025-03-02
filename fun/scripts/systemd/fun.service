@@ -1,0 +1,17 @@
+[Unit]
+Description=Fun Server - Your private cloud
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/fun --daemon
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fun-server
+Environment="USER=root"
+
+[Install]
+WantedBy=multi-user.target 

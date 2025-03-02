@@ -1,0 +1,36 @@
+#!/bin/sh
+# Post-installation script for Fun Server
+
+set -e
+
+# Create configuration directory if it doesn't exist
+mkdir -p /etc/fun
+mkdir -p /var/log/fun
+
+# Create default configuration if it doesn't exist
+if [ ! -f /etc/fun/config.json ]; then
+    cat > /etc/fun/config.json << EOF
+{
+  "cloud_url": "https://api.thefunserver.com",
+  "poll_interval": 60,
+  "docker_host": "unix:///var/run/docker.sock",
+  "docker_network": "fun_network",
+  "log_level": "info",
+  "log_file": "/var/log/fun/fun.log"
+}
+EOF
+    chmod 600 /etc/fun/config.json
+fi
+
+# Reload systemd configuration
+systemctl daemon-reload
+
+# Enable and start the service
+systemctl enable fun
+systemctl start fun || true
+
+echo "Fun Server has been installed and started."
+echo "Configuration is located at /etc/fun"
+echo "Logs are located at /var/log/fun"
+
+exit 0 

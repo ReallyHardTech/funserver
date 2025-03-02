@@ -1,0 +1,68 @@
+.TH FUN 1 "May 2024" "Fun Server VERSION" "Fun Server Manual"
+.SH NAME
+fun \- Docker container manager with cloud orchestration
+.SH SYNOPSIS
+.B fun
+[\fIOPTIONS\fR] [\fICOMMAND\fR]
+.SH DESCRIPTION
+.B fun
+is a Docker container management tool that allows you to install and manage compatible applications seamlessly. It supports installation on macOS, Windows, and Linux.
+.PP
+Fun Server communicates with a cloud orchestrator to provide container management, updates, and monitoring.
+.SH OPTIONS
+.TP
+.B \-\-daemon
+Run in daemon mode (background service)
+.TP
+.B \-\-config \fIFILE\fR
+Specify an alternative configuration file (default: /etc/fun/config.json)
+.TP
+.B \-\-log\-level \fILEVEL\fR
+Set the log level (debug, info, warn, error)
+.TP
+.B \-\-log\-file \fIFILE\fR
+Set the log file (default: /var/log/fun/fun.log)
+.TP
+.B \-\-version
+Show version information
+.TP
+.B \-\-help
+Show help information
+.SH COMMANDS
+.TP
+.B status
+Show the status of the Fun Server and running containers
+.TP
+.B list
+List available applications
+.TP
+.B start \fIAPP\fR
+Start an application
+.TP
+.B stop \fIAPP\fR
+Stop an application
+.TP
+.B start\-service
+Start the Fun Server service
+.TP
+.B stop\-service
+Stop the Fun Server service
+.PP
+Note: Service installation and removal are handled by platform-specific installers, not by command-line options.
+.SH FILES
+.TP
+.I /etc/fun/config.json
+Configuration file
+.TP
+.I /var/log/fun/fun.log
+Log file
+.TP
+.I /etc/systemd/system/fun.service
+Systemd service file
+.SH BUGS
+Report bugs to <support@thefunserver.com>
+.SH AUTHOR
+Fun Server Team <support@thefunserver.com>
+.SH SEE ALSO
+.BR docker (1),
+.BR systemctl (1) 

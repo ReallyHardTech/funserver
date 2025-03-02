@@ -1,0 +1,20 @@
+#!/bin/bash
+# postinstall script for macOS
+
+# Create logs directory for service
+mkdir -p /Library/Logs/Fun
+
+# Create the LaunchDaemon directory if it doesn't exist
+mkdir -p /Library/LaunchDaemons
+
+# Copy the launchd plist
+cp /tmp/com.funserver.fun.plist /Library/LaunchDaemons/com.funserver.fun.plist
+chmod 644 /Library/LaunchDaemons/com.funserver.fun.plist
+
+# Load the service
+launchctl load -w /Library/LaunchDaemons/com.funserver.fun.plist || true
+
+echo "Fun Server has been installed and registered as a system service"
+echo "The service will start automatically on system boot"
+
+exit 0 

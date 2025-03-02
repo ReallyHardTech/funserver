@@ -1,0 +1,16 @@
+#!/bin/sh
+# Pre-removal script for Fun Server
+
+set -e
+
+# Stop and disable the service
+systemctl stop fun || true
+systemctl disable fun || true
+
+# Reload systemd configuration
+systemctl daemon-reload
+
+# Note: We don't remove configuration files here to preserve user settings
+# The configuration and logs will remain in /etc/fun and /var/log/fun
+
+exit 0 

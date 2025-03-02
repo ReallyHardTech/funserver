@@ -1,0 +1,16 @@
+#!/bin/bash
+# preinstall script for macOS
+
+# Unload previous service if it exists
+if [ -f /Library/LaunchDaemons/com.funserver.fun.plist ]; then
+    echo "Stopping existing Fun Server service..."
+    launchctl unload -w /Library/LaunchDaemons/com.funserver.fun.plist || true
+fi
+
+# Create temporary directory for the installer
+mkdir -p /tmp
+
+# Copy LaunchDaemon plist to temporary location (for postinstall to use)
+cp "$PACKAGE_PATH/Contents/Resources/com.funserver.fun.plist" /tmp/com.funserver.fun.plist || true
+
+exit 0 

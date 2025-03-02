@@ -1,0 +1,295 @@
+# .goreleaser.yml configuration
+
+# GoReleaser configuration for Fun Server
+project_name: fun
+
+# Environment variables that are passed to the build process
+env:
+  - GO111MODULE=on
+
+# Actions to run before the build process starts
+before:
+  hooks:
+    # You may remove this if you don't use go modules.
+    - go mod download
+    # Download containerd binaries for all platforms
+    - go run scripts/download_containerd.go
+
+# Build configuration
+builds:
+  - id: fun
+    main: ./main.go
+    binary: fun
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - 386
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: 386
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.BuildTime={{.Date}}
+      - -X main.GitCommit={{.ShortCommit}}
+    # Add build hooks to ensure service-related flags are available
+    hooks:
+      pre: go generate ./...
+
+# Archive configuration
+archives:
+  - id: fun-zip
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}-{{ .Version }}"
+    format: zip
+    files:
+      - LICENSE
+      - README.md
+      - config/**/*
+      # Include bundled containerd binaries
+      - src: binaries/windows/containerd.exe
+        dst: binaries/windows/
+      # Include bundled runc binaries
+      - src: binaries/windows/runc.exe
+        dst: binaries/windows/
+      # Include bundled CNI plugins (all .exe files in the cni directory)
+      - src: binaries/windows/cni/**/*.exe
+        dst: binaries/windows/cni/
+    builds:
+      - fun
+    allow_different_binary_count: true
+    # Only create .zip files for Windows
+    targets:
+      - windows_amd64
+      - windows_386
+      - windows_arm64
+      
+  - id: fun-targz
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}-{{ .Version }}"
+    format: tar.gz
+    files:
+      - LICENSE
+      - README.md
+      - config/**/*
+      # Include bundled containerd binaries for Linux
+      - src: binaries/linux/containerd
+        dst: binaries/linux/
+      # Include bundled runc binaries for Linux
+      - src: binaries/linux/runc
+        dst: binaries/linux/
+      # Include bundled CNI plugins for Linux
+      - src: binaries/linux/cni/*
+        dst: binaries/linux/cni/
+      # Include bundled containerd binaries for macOS
+      - src: binaries/darwin/containerd
+        dst: binaries/darwin/
+    builds:
+      - fun
+    allow_different_binary_count: true
+    # Only create .tar.gz files for macOS and Linux
+    targets:
+      - darwin_amd64
+      - darwin_arm64
+      - linux_amd64
+      - linux_386
+      - linux_arm64
+      
+# macOS DMG configuration
+dmg:
+  icon: ./assets/icon.icns
+  background: ./assets/dmg-background.png
+  window_x: 200
+  window_y: 100
+  window_width: 500
+  window_height: 344
+  contents:
+    - x: 130
+      y: 150
+      type: file
+      path: "{{.ArtifactPath}}"
+    - x: 380
+      y: 150
+      type: link
+      path: /Applications
+
+# macOS pkg configuration for service installation
+macospkgs:
+  - id: fun-pkg
+    pkg: Fun Server Installer.pkg
+    targets:
+      - darwin_amd64
+      - darwin_arm64
+    identity: "" # Set a specific identity for signing or leave empty to skip signing
+    contents:
+      - src: "{{.ProjectDir}}/fun/scripts/macos/com.funserver.fun.plist"
+        dst: /Library/LaunchDaemons/com.funserver.fun.plist
+        type: file
+        mode: 0644
+      - src: "{{.Binaries.fun.Path}}"
+        dst: /usr/local/bin/fun
+        type: file
+        mode: 0755
+      # Include bundled containerd binaries for macOS
+      - src: "{{.ProjectDir}}/binaries/darwin/containerd"
+        dst: /usr/local/bin/fun-containerd
+        type: file
+        mode: 0755
+      # Create CNI directory
+      - dst: /usr/local/opt/fun/cni
+        type: dir
+        mode: 0755
+    scripts:
+      preinstall: "{{.ProjectDir}}/fun/scripts/macos/preinstall"
+      postinstall: "{{.ProjectDir}}/fun/scripts/macos/postinstall"
+
+# Windows MSI configuration
+msi:
+  - id: fun-msi
+    icon: ./assets/icon.ico
+    upgrade_code: 1d7e5aaf-8640-4388-98d8-b66a39a3237e  # Random UUID for upgrade code
+    product_name: Fun Server
+    license: LICENSE
+    manufacturer: The Fun Server Team
+    homepage: https://thefunserver.com
+    short_description: Docker container management made simple
+    install_mode: peruser
+    files:
+      LICENSE.rtf: /
+      README.md: /
+      README-WINDOWS-CONTAINERS.md: /  # Include our Windows container docs
+      fun/scripts/windows/install-service.cmd: /
+      fun/scripts/windows/uninstall-service.cmd: /
+      fun/scripts/windows/check-wsl.ps1: /  # WSL2 detection script
+      fun/scripts/windows/install-wsl.ps1: /  # WSL2 installation helper
+      # Include bundled containerd binaries for Windows
+      binaries/windows/containerd.exe: /binaries/windows/
+      # Include bundled runc binaries for Windows
+      binaries/windows/runc.exe: /binaries/windows/
+      # Include bundled CNI plugins for Windows
+      binaries/windows/cni/: /binaries/windows/cni/
+    # Add service installation and removal using Windows batch scripts
+    custom_actions:
+      install: 
+        - cmd /c "%INSTALLDIR%\install-service.cmd %INSTALLDIR%"
+        - powershell.exe -ExecutionPolicy Bypass -NoProfile -File "%INSTALLDIR%\check-wsl.ps1" "%INSTALLDIR%"
+      uninstall:
+        - cmd /c "%INSTALLDIR%\uninstall-service.cmd"
+    env_vars:
+      # Environment variable to tell the Fun binary it's running in install mode
+      FUN_INSTALLER: "1"
+
+# Checksum configuration
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+# Changelog configuration
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - Merge pull request
+      - Merge branch
+
+# Release configuration (initially disabled)
+release:
+  disable: false  # Enable releases since we're now using DMG and MSI
+  draft: true
+  prerelease: auto
+
+# Linux packaging formats (deb, rpm)
+nfpms:
+  - id: fun-linux-packages
+    package_name: fun-server
+    homepage: https://thefunserver.com
+    maintainer: Fun Server Team <team@thefunserver.com>
+    description: Fun Server - Docker container management made simple
+    license: Apache-2.0
+    vendor: The Fun Server Team
+    
+    # Package formats to generate
+    formats:
+      - deb
+      - rpm
+    
+    # Package-specific configurations
+    deb:
+      lintian_overrides:
+        - statically-linked-binary
+        - changelog-file-missing-in-native-package
+    rpm:
+      group: Applications/System
+      compression: lzma
+      
+    # Runtime dependencies
+    dependencies:
+      - bash
+    recommends:
+      - docker
+      
+    # Control where packages are built
+    builds:
+      - fun
+    
+    # File mapping configuration
+    contents:
+      # Configuration files
+      - src: fun/config/config.json
+        dst: /etc/fun/config.json
+        type: config
+      
+      # Systemd service file (created dynamically)
+      - src: fun/scripts/systemd/fun.service
+        dst: /etc/systemd/system/fun.service
+        type: config
+      
+      # Documentation files  
+      - src: LICENSE
+        dst: /usr/share/doc/fun-server/LICENSE
+      - src: README.md
+        dst: /usr/share/doc/fun-server/README.md
+        
+      # Desktop integration
+      - src: fun/assets/fun-server.desktop
+        dst: /usr/share/applications/fun-server.desktop
+      - src: fun/assets/icon-256.png
+        dst: /usr/share/icons/hicolor/256x256/apps/fun-server.png
+      
+      # Include bundled containerd binary for Linux
+      - src: binaries/linux/containerd
+        dst: /usr/lib/fun-server/containerd
+        type: binary
+        mode: 0755
+        
+      # Include bundled runc binary for Linux
+      - src: binaries/linux/runc
+        dst: /usr/lib/fun-server/runc
+        type: binary
+        mode: 0755
+        
+      # Include bundled CNI plugins for Linux
+      - src: binaries/linux/cni
+        dst: /usr/lib/fun-server/cni
+        type: dir
+        mode: 0755
+    
+    # Scripts for package lifecycle management
+    scripts:
+      preinstall: "fun/scripts/preinstall.sh"
+      postinstall: "fun/scripts/postinstall.sh"
+      preremove: "fun/scripts/preremove.sh"
+      postremove: "fun/scripts/postremove.sh"
+
+snapshot:
+  name_template: "{{ .Tag }}-next" 

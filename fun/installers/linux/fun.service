@@ -1,0 +1,16 @@
+[Unit]
+Description=Fun Server
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+ExecStart=/usr/local/bin/fun --daemon
+Restart=always
+RestartSec=10
+User=root
+Group=root
+StandardOutput=append:/var/log/fun/fun.log
+StandardError=append:/var/log/fun/fun.log
+
+[Install]
+WantedBy=multi-user.target 

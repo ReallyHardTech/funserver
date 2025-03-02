@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Fun Server
+Comment=Self host server software as easily as installing apps on your phone
+Exec=/usr/bin/fun
+Icon=fun-server
+Terminal=false
+Type=Application
+Categories=Development;Utility;
+Keywords=docker;container;dev;development;
+StartupNotify=true 

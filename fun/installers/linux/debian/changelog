@@ -1,0 +1,8 @@
+fun (VERSION) stable; urgency=medium
+
+  * Initial release
+  * Support for Docker container management
+  * Cloud synchronization capabilities
+  * Cross-platform compatibility (Linux, macOS, Windows)
+
+ -- Fun Server Team <support@thefunserver.com>  Tue, 21 May 2024 12:00:00 +0000 
