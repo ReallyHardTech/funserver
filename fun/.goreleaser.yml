@@ -53,16 +53,6 @@ archives:
     files:
       - LICENSE
       - README.md
-      - config/**/*
-      # Include bundled containerd binaries
-      - src: binaries/windows/containerd.exe
-        dst: binaries/windows/
-      # Include bundled runc binaries
-      - src: binaries/windows/runc.exe
-        dst: binaries/windows/
-      # Include bundled CNI plugins (all .exe files in the cni directory)
-      - src: binaries/windows/cni/**/*.exe
-        dst: binaries/windows/cni/
     builds:
       - fun
     allow_different_binary_count: true
@@ -76,19 +66,6 @@ archives:
     files:
       - LICENSE
       - README.md
-      - config/**/*
-      # Include bundled containerd binaries for Linux
-      - src: binaries/linux/containerd
-        dst: binaries/linux/
-      # Include bundled runc binaries for Linux
-      - src: binaries/linux/runc
-        dst: binaries/linux/
-      # Include bundled CNI plugins for Linux
-      - src: binaries/linux/cni/*
-        dst: binaries/linux/cni/
-      # Include bundled containerd binaries for macOS
-      - src: binaries/darwin/containerd
-        dst: binaries/darwin/
     builds:
       - fun
     allow_different_binary_count: true
@@ -154,14 +131,14 @@ nfpms:
     builds:
       - fun
     
-    # File mapping configuration
-    contents:
-      # Configuration files
-      - src: fun/config/config.json
-        dst: /etc/fun/config.json
-        type: config
-        file_info:
-          mode: 0644
+    # File mapping configuration - simplified for now
+    # contents:
+    #   # Configuration files
+    #   - src: config/config.json
+    #     dst: /etc/fun/config.json
+    #     type: config
+    #     file_info:
+    #       mode: 0644
 
 # Add a comment about the removed sections that could be implemented using the proper GoReleaser configuration
 # Note: The following sections were removed due to incompatibility with the current GoReleaser version:
