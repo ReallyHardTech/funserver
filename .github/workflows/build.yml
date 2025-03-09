@@ -123,16 +123,14 @@ jobs:
       - name: Install Docker and LinuxKit
         run: |
           brew tap linuxkit/linuxkit
-          brew install colima docker
+          brew install colima docker qemu
           brew install --HEAD linuxkit
-          colima start
+          LIMACTL_PATH=$(brew --prefix)/bin/limactl
+          sudo curl -L -o $LIMACTL_PATH https://github.com/mikekazakov/lima-nohvf/raw/master/limactl && sudo chmod +x $LIMACTL_PATH
+          colima start --network-address --arch arm64 --vm-type=qemu
+          docker version
+          docker info
           sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
-
-      - name: Generate and Build LinuxKit Image
-        run: |
-          cd fun
-          go run ./container/generate_linuxkit.go -output .cache/linuxkit/config.yml
-          linuxkit build -format kernel+initrd -output .cache/linuxkit .cache/linuxkit/config.yml
 
       - name: Build and Release
         env:
