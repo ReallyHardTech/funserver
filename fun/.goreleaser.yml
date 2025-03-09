@@ -1,21 +1,15 @@
-# .goreleaser.yml configuration
+# yaml-language-server: $schema=https://goreleaser.com/static/schema-pro.json
 
-# GoReleaser configuration for Fun Server
 project_name: fun
-
-# Environment variables that are passed to the build process
+version: 2
 env:
   - GO111MODULE=on
 
-# Actions to run before the build process starts
 before:
   hooks:
-    # You may remove this if you don't use go modules.
     - go mod download
-    # Download containerd binaries for all platforms
-    - go run ../scripts/download_containerd.go
+    - go run scripts/download_deps.go
 
-# Build configuration
 builds:
   - id: fun
     main: ./main.go
@@ -28,12 +22,8 @@ builds:
       - darwin
     goarch:
       - amd64
-      - 386
       - arm64
-    ignore:
-      - goos: darwin
-        goarch: 386
-    mod_timestamp: '{{ .CommitTimestamp }}'
+    mod_timestamp: "{{ .CommitTimestamp }}"
     flags:
       - -trimpath
     ldflags:
@@ -41,78 +31,89 @@ builds:
       - -X main.Version={{.Version}}
       - -X main.BuildTime={{.Date}}
       - -X main.GitCommit={{.ShortCommit}}
-    # Add build hooks to ensure service-related flags are available
     hooks:
-      pre: go generate ./...
+      pre: |
+        go generate ./... && \
+        go run ./container/generate_linuxkit.go -output bin/{{.Os}}-{{.Arch}}/linuxkit/config.yml
 
-# Archive configuration
+msi:
+  - id: fun-msi-amd64
+    name: "Fun-Server-amd64"
+    wxs: installers/windows/app-amd64.wxs
+    extra_files:
+      - installers/windows/install.ps1
+      - installers/windows/uninstall.ps1
+      - installers/windows/check-wsl.ps1
+      - installers/windows/install-wsl.ps1
+      - bin/linux-amd64/runc
+      - bin/linux-amd64/containerd
+    replace: true
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    version: v4
+
+  - id: fun-msi-arm64
+    name: "Fun-Server-arm64"
+    wxs: installers/windows/app-arm64.wxs
+    extra_files:
+      - installers/windows/install.ps1
+      - installers/windows/uninstall.ps1
+      - installers/windows/check-wsl.ps1
+      - installers/windows/install-wsl.ps1
+      - bin/linux-arm64/runc
+      - bin/linux-arm64/containerd
+    replace: true
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    version: v4
+
+dmg:
+  - id: fun-dmg
+    name: "Fun-Server-{{.Arch}}"
+    ids:
+      - fun-archives
+    extra_files:
+      - LICENSE
+      - README.md
+      - installers/macos/install.sh
+    replace: true
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
 archives:
-  - id: fun-zip
+  - id: fun-archives
     name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}-{{ .Version }}"
-    format: zip
+    formats:
+      - tar.gz
+      - zip
     files:
       - LICENSE
       - README.md
+      - installers/{{ .Os }}/*
+      - bin/{{ .Os }}-{{ .Arch }}/*
+      - bin/linux-{{ .Arch }}/*
     builds:
       - fun
     allow_different_binary_count: true
     format_overrides:
       - goos: windows
-        format: zip
-      
-  - id: fun-targz
-    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}-{{ .Version }}"
-    format: tar.gz
-    files:
-      - LICENSE
-      - README.md
-    builds:
-      - fun
-    allow_different_binary_count: true
-    format_overrides:
+        formats:
+          - zip
       - goos: darwin
-        format: tar.gz
+        formats:
+          - tar.gz
       - goos: linux
-        format: tar.gz
+        formats:
+          - tar.gz
 
-# Checksum configuration
-checksum:
-  name_template: 'checksums.txt'
-  algorithm: sha256
-
-# Changelog configuration
-changelog:
-  sort: asc
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
-      - '^ci:'
-      - Merge pull request
-      - Merge branch
-
-# Release configuration
-release:
-  disable: false
-  draft: true
-  prerelease: auto
-
-# Linux packaging formats (deb, rpm)
 nfpms:
   - id: fun-linux-packages
     package_name: fun-server
     homepage: https://thefunserver.com
     maintainer: Fun Server Team <team@thefunserver.com>
-    description: Fun Server - Docker container management made simple
+    description: Fun Server - Self host server software as easily as installing apps on your phone.
     license: Apache-2.0
     vendor: The Fun Server Team
-    
-    # Package formats to generate
     formats:
       - deb
       - rpm
-    
-    # Package-specific configurations
     deb:
       lintian_overrides:
         - statically-linked-binary
@@ -120,29 +121,41 @@ nfpms:
     rpm:
       group: Applications/System
       compression: lzma
-      
-    # Runtime dependencies
     dependencies:
       - bash
     recommends:
       - docker
-      
-    # Control where packages are built
     builds:
       - fun
-    
-    # File mapping configuration - simplified for now
-    # contents:
-    #   # Configuration files
-    #   - src: config/config.json
-    #     dst: /etc/fun/config.json
-    #     type: config
-    #     file_info:
-    #       mode: 0644
+    contents:
+      - src: installers/linux/fun.service
+        dst: /etc/systemd/system/fun.service
+      - src: installers/linux/fun.1
+        dst: /usr/share/man/man1/fun.1
+      - src: bin/linux-{{.Arch}}/runc
+        dst: /opt/fun-server/bin/runc
+        file_info:
+          mode: 0755
+      - src: bin/linux-{{.Arch}}/containerd
+        dst: /opt/fun-server/bin/containerd
+        file_info:
+          mode: 0755
 
-# Add a comment about the removed sections that could be implemented using the proper GoReleaser configuration
-# Note: The following sections were removed due to incompatibility with the current GoReleaser version:
-# - dmg: macOS DMG configuration
-# - macospkgs: macOS pkg configuration
-# - msi: Windows MSI configuration
-# These should be implemented using the proper configuration or external scripts 
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  disable: false
+  draft: true
+  prerelease: auto

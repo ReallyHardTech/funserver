@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Fun Server"
+    Language="1033"
+    Version="{{.RawVersion}}"
+    Manufacturer="Fun Server Team"
+    UpgradeCode="ad567094-e1c2-49c7-9ea6-919c41b5a56c">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Feature Id="ProductFeature" Title="Fun Server">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Fun Server">
+        <Component Id="MainExecutable" Guid="cc08b834-6ed7-4ecd-8c84-ace3114d7cb4">
+          <File Id="FunEXE" Name="fun.exe" Source="fun.exe" KeyPath="yes" />
+          <File Id="Runc" Name="runc" Source="bin/linux-amd64/runc" />
+          <File Id="Containerd" Name="containerd" Source="bin/linux-amd64/containerd" />
+        </Component>
+        <Directory Id="Scripts" Name="scripts">
+          <Component Id="InstallScripts" Guid="c62ad101-799d-41d5-99e4-eab5df1022ce">
+            <File Id="InstallPS1" Name="install.ps1" Source="installers/windows/install.ps1" />
+            <File Id="UninstallPS1" Name="uninstall.ps1" Source="installers/windows/uninstall.ps1" />
+            <File Id="CheckWSLPS1" Name="check-wsl.ps1" Source="installers/windows/check-wsl.ps1" />
+            <File Id="InstallWSLPS1" Name="install-wsl.ps1"
+              Source="installers/windows/install-wsl.ps1" />
+          </Component>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <ComponentGroup Id="ProductComponents">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="InstallScripts" />
+    </ComponentGroup>
+
+    <CustomAction Id="CheckWSL"
+      Directory="INSTALLFOLDER"
+      Execute="deferred"
+      Impersonate="yes"
+      ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]scripts\check-wsl.ps1&quot;" />
+
+    <CustomAction Id="InstallWSL"
+      Directory="INSTALLFOLDER"
+      Execute="deferred"
+      Impersonate="yes"
+      ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]scripts\install-wsl.ps1&quot;" />
+
+    <CustomAction Id="InstallScript"
+      Directory="INSTALLFOLDER"
+      Execute="deferred"
+      Impersonate="yes"
+      ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]scripts\install.ps1&quot;" />
+
+    <CustomAction Id="UninstallScript"
+      Directory="INSTALLFOLDER"
+      Execute="deferred"
+      Impersonate="yes"
+      ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]scripts\uninstall.ps1&quot;" />
+
+    <InstallExecuteSequence>
+      <Custom Action="CheckWSL" After="InstallFiles" Condition="NOT Installed" />
+      <Custom Action="InstallWSL" After="CheckWSL"
+        Condition="NOT Installed AND WSLREQUIRED=&quot;1&quot;" />
+      <Custom Action="InstallScript" After="InstallWSL" Condition="NOT Installed" />
+      <Custom Action="UninstallScript" Before="RemoveFiles" Condition="REMOVE=&quot;ALL&quot;" />
+    </InstallExecuteSequence>
+
+  </Package>
+</Wix> 

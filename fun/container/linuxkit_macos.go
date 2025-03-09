@@ -46,54 +46,48 @@ type LinuxKitYAMLConfig struct {
 }
 
 const linuxKitConfigTemplate = `kernel:
-  image: linuxkit/kernel:5.4.129
+  image: linuxkit/kernel:6.6.71
   cmdline: "console=tty0 console=ttyS0 console=ttyAMA0"
 
 init:
-  - linuxkit/init:14df799bb3b9e0eb0491da9fda7f32a108a2e2a5
-  - linuxkit/runc:4ca27ce9ac9db402c138f63d7b59f3533bd4d41c
-  - linuxkit/containerd:9cd43727ed66a7605f655ff95df83abaf5816f31
+  - linuxkit/init:8eea386739975a43af558eec757a7dcb3a3d2e7b
+  - linuxkit/runc:667e7ea2c426a2460ca21e3da065a57dbb3369c9
+  - linuxkit/containerd:a988a1a8bcbacc2c0390ca0c08f949e2b4b5915d
+  - linuxkit/ca-certificates:7b32a26ca9c275d3ef32b11fe2a83dbd2aee2fdb
 
 onboot:
   - name: sysctl
-    image: linuxkit/sysctl:cf67133f5601826f5326d67d697111c880f9a57d
+    image: linuxkit/sysctl:5f56434b81004b50b47ed629b222619168c2bcdf
   - name: dhcpcd
-    image: linuxkit/dhcpcd:63f26d54f8bf33821403286a40b93593b3f7e788
+    image: linuxkit/dhcpcd:157df9ef45a035f1542ec2270e374f18efef98a5
     command: ["/sbin/dhcpcd", "--nobackground", "-f", "/dhcpcd.conf", "-1"]
 
+onshutdown:
+  - name: shutdown
+    image: busybox:latest
+    command: ["/bin/echo", "peace out"]
+
 services:
-  - name: rngd
-    image: linuxkit/rngd:f66c0b06f7b543c9a779a8749dc477c7e1694f3a
-  - name: containerd
-    image: linuxkit/containerd:9cd43727ed66a7605f655ff95df83abaf5816f31
-    rootfs: true
+  - name: getty
+    image: linuxkit/getty:05eca453695984a69617f1f1f0bcdae7f7032967
     env:
-      - CONTAINERD_CONFIG=/etc/containerd/config.toml
+      - INSECURE=true
+  - name: rngd
+    image: linuxkit/rngd:1a18f2149e42a0a1cb9e7d37608a494342c26032
+  - name: nginx
+    image: nginx:1.19.5-alpine
+    capabilities:
+      - CAP_NET_BIND_SERVICE
+      - CAP_CHOWN
+      - CAP_SETUID
+      - CAP_SETGID
+      - CAP_DAC_OVERRIDE
     binds:
-      - /etc/containerd/config.toml:/etc/containerd/config.toml
-      - /containers:/containers
-      - /run:/run
-      - /var:/var
-      - /var/lib/containerd:/var/lib/containerd
-      - /var/run:/var/run
-      - /cni:/cni
+      - /etc/resolv.conf:/etc/resolv.conf
+
 files:
-  - path: /etc/containerd/config.toml
-    contents: |
-      [plugins.cri]
-        sandbox_image = "k8s.gcr.io/pause:3.6"
-      [plugins.cri.containerd.runtimes.runc]
-        runtime_type = "io.containerd.runc.v2"
-      [plugins.cri.cni]
-        bin_dir = "/cni/bin"
-        conf_dir = "/cni/conf"
-      [plugins.scheduler]
-        pause_threshold = 0.02
-        deletion_threshold = 0
-        mutation_threshold = 100
-        schedule_delay = "0s"
-        startup_delay = "100ms"
-`
+  - path: etc/linuxkit-config
+    metadata: yaml`
 
 // GenerateLinuxKitConfig generates a LinuxKit YAML configuration for macOS
 func GenerateLinuxKitConfig(outputPath string) error {
