@@ -31,14 +31,12 @@ var (
 	daemonMode  bool
 	showVersion bool
 	configPath  string
-	compose     string
 )
 
 func init() {
 	flag.BoolVar(&daemonMode, "daemon", false, "Run in daemon mode")
 	flag.BoolVar(&showVersion, "version", false, "Show version information")
 	flag.StringVar(&configPath, "config", config.GetDefaultConfigPath(), "Path to configuration file")
-	flag.StringVar(&compose, "compose", "", "Path to compose file for container orchestration")
 	flag.Parse()
 }
 
@@ -55,12 +53,6 @@ func main() {
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
-	}
-
-	// If compose flag is set, handle compose commands
-	if compose != "" {
-		handleComposeCommands(cfg, compose)
-		return
 	}
 
 	// If not in daemon mode, process CLI commands
@@ -293,84 +285,6 @@ func handleContainerCommands(cfg *config.Config, args []string) {
 	}
 }
 
-// handleComposeCommands handles docker-compose like commands
-func handleComposeCommands(cfg *config.Config, composePath string) {
-	args := flag.Args()
-	if len(args) == 0 {
-		showComposeHelp()
-		return
-	}
-
-	// Create container client
-	client, err := container.NewClient(cfg.ContainerdSocket, cfg.ContainerdNamespace)
-	if err != nil {
-		fmt.Printf("Error: Failed to connect to containerd: %v\n", err)
-		os.Exit(1)
-	}
-	defer client.Close()
-
-	// Verify connection to containerd
-	if err := client.VerifyConnection(context.Background()); err != nil {
-		fmt.Printf("Error: Failed to connect to containerd: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Create project name from directory name
-	projectName := filepath.Base(filepath.Dir(composePath))
-
-	// Create compose instance
-	compose, err := container.NewCompose(client, projectName, composePath, cfg.ContainerRoot)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	ctx := context.Background()
-
-	switch args[0] {
-	case "up":
-		fmt.Println("Starting services...")
-		if err := compose.Up(ctx); err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("Services started successfully")
-
-	case "down":
-		fmt.Println("Stopping services...")
-		if err := compose.Down(ctx); err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("Services stopped successfully")
-
-	case "restart":
-		fmt.Println("Restarting services...")
-		if err := compose.Restart(ctx); err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("Services restarted successfully")
-
-	case "ps":
-		fmt.Println("Service status:")
-		status, err := compose.GetStatus(ctx)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-
-		fmt.Println("SERVICE\t\tSTATUS")
-		for service, status := range status {
-			fmt.Printf("%s\t\t%s\n", service, status)
-		}
-
-	default:
-		fmt.Printf("Unknown compose command: %s\n", args[0])
-		showComposeHelp()
-	}
-}
-
 // showHelp displays usage information
 func showHelp() {
 	fmt.Println("Usage: fun [options] <command>")
@@ -381,8 +295,6 @@ func showHelp() {
 	fmt.Println("  stop         Stop the Fun Server service")
 	fmt.Println("  status       Check the status of Fun Server")
 	fmt.Println("  container    Manage containers")
-	fmt.Println("\nCompose Mode:")
-	fmt.Println("  fun --compose /path/to/compose.yml <command>")
 	fmt.Println("\nNote: Service installation and removal is handled by platform-specific installers.")
 }
 
@@ -391,21 +303,11 @@ func showContainerHelp() {
 	fmt.Println("Usage: fun container <command>")
 	fmt.Println("\nCommands:")
 	fmt.Println("  list                   List all containers")
-	fmt.Println("  create <name> <image>  Create a new container")
+	fmt.Println("  create <n> <image>  Create a new container")
 	fmt.Println("  start <id>             Start a container")
 	fmt.Println("  stop <id>              Stop a container")
 	fmt.Println("  remove <id> [--force]  Remove a container")
 	fmt.Println("  images                 List all images")
-}
-
-// showComposeHelp displays compose command usage
-func showComposeHelp() {
-	fmt.Println("Usage: fun --compose /path/to/compose.yml <command>")
-	fmt.Println("\nCommands:")
-	fmt.Println("  up        Start all services")
-	fmt.Println("  down      Stop and remove all services")
-	fmt.Println("  restart   Restart all services")
-	fmt.Println("  ps        Show service status")
 }
 
 // runDaemon starts the background service
@@ -511,12 +413,7 @@ func runCloudCommunication(ctx context.Context, cfg *config.Config, cloudClient 
 func runContainerManagement(ctx context.Context, cfg *config.Config, containerClient *container.Client) {
 	log.Println("Starting container management service...")
 
-	// Create compose config directory if it doesn't exist
-	if err := os.MkdirAll(cfg.ComposeConfigDir, 0755); err != nil {
-		log.Printf("Error creating compose config directory: %v", err)
-	}
-
-	// Scan compose directory periodically for changes
+	// Simplified container management without compose functionality
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
@@ -526,49 +423,13 @@ func runContainerManagement(ctx context.Context, cfg *config.Config, containerCl
 			log.Println("Shutting down container management service...")
 			return
 		case <-ticker.C:
-			// Scan compose directory for configuration files
-			files, err := filepath.Glob(filepath.Join(cfg.ComposeConfigDir, "*.yml"))
-			if err != nil {
-				log.Printf("Error scanning compose directory: %v", err)
+			// Basic container health check
+			if err := containerClient.VerifyConnection(ctx); err != nil {
+				log.Printf("Connection to containerd lost: %v", err)
 				continue
 			}
 
-			for _, file := range files {
-				projectName := filepath.Base(filepath.Dir(file))
-				compose, err := container.NewCompose(containerClient, projectName, file, cfg.ContainerRoot)
-				if err != nil {
-					log.Printf("Error creating compose for %s: %v", file, err)
-					continue
-				}
-
-				// Check if services are running, start them if needed
-				if err := compose.LoadConfig(); err != nil {
-					log.Printf("Error loading compose config %s: %v", file, err)
-					continue
-				}
-
-				status, err := compose.GetStatus(ctx)
-				if err != nil {
-					log.Printf("Error getting compose status for %s: %v", file, err)
-					continue
-				}
-
-				needsStart := false
-				for service, status := range status {
-					if status != "running" {
-						log.Printf("Service %s in project %s is not running (status: %s), will start services", service, projectName, status)
-						needsStart = true
-						break
-					}
-				}
-
-				if needsStart {
-					log.Printf("Starting services for project %s...", projectName)
-					if err := compose.Up(ctx); err != nil {
-						log.Printf("Error starting services for %s: %v", file, err)
-					}
-				}
-			}
+			// Container maintenance operations could be added here
 		}
 	}
 }

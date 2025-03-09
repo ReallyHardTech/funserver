@@ -23,7 +23,6 @@ type Config struct {
 	ContainerdSocket    string `json:"containerd_socket"`
 	ContainerdNamespace string `json:"containerd_namespace"`
 	ContainerRoot       string `json:"container_root"`
-	ComposeConfigDir    string `json:"compose_config_dir"`
 }
 
 // DefaultConfig returns the default configuration
@@ -36,7 +35,6 @@ func DefaultConfig() *Config {
 		ContainerdSocket:    getDefaultContainerdSocket(),
 		ContainerdNamespace: "funserver",
 		ContainerRoot:       getDefaultContainerRoot(),
-		ComposeConfigDir:    getDefaultComposeConfigDir(),
 	}
 }
 
@@ -134,9 +132,4 @@ func getDefaultContainerdSocket() string {
 // getDefaultContainerRoot returns the default path for container data
 func getDefaultContainerRoot() string {
 	return filepath.Join(GetConfigDir(), "containers")
-}
-
-// getDefaultComposeConfigDir returns the default path for compose configuration files
-func getDefaultComposeConfigDir() string {
-	return filepath.Join(GetConfigDir(), "compose")
 }
