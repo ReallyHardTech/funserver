@@ -47,6 +47,26 @@ msi:
       - installers/windows/install-wsl.ps1
       - bin/linux-amd64/runc
       - bin/linux-amd64/containerd
+      - bin/linux-amd64/cni/LICENSE
+      - bin/linux-amd64/cni/README.md
+      - bin/linux-amd64/cni/bandwidth
+      - bin/linux-amd64/cni/bridge
+      - bin/linux-amd64/cni/dhcp
+      - bin/linux-amd64/cni/dummy
+      - bin/linux-amd64/cni/firewall
+      - bin/linux-amd64/cni/host-device
+      - bin/linux-amd64/cni/host-local
+      - bin/linux-amd64/cni/ipvlan
+      - bin/linux-amd64/cni/loopback
+      - bin/linux-amd64/cni/macvlan
+      - bin/linux-amd64/cni/portmap
+      - bin/linux-amd64/cni/ptp
+      - bin/linux-amd64/cni/sbr
+      - bin/linux-amd64/cni/static
+      - bin/linux-amd64/cni/tap
+      - bin/linux-amd64/cni/tuning
+      - bin/linux-amd64/cni/vlan
+      - bin/linux-amd64/cni/vrf
     replace: true
     mod_timestamp: "{{ .CommitTimestamp }}"
     version: v4
@@ -61,6 +81,26 @@ msi:
       - installers/windows/install-wsl.ps1
       - bin/linux-arm64/runc
       - bin/linux-arm64/containerd
+      - bin/linux-arm64/cni/LICENSE
+      - bin/linux-arm64/cni/README.md
+      - bin/linux-arm64/cni/bandwidth
+      - bin/linux-arm64/cni/bridge
+      - bin/linux-arm64/cni/dhcp
+      - bin/linux-arm64/cni/dummy
+      - bin/linux-arm64/cni/firewall
+      - bin/linux-arm64/cni/host-device
+      - bin/linux-arm64/cni/host-local
+      - bin/linux-arm64/cni/ipvlan
+      - bin/linux-arm64/cni/loopback
+      - bin/linux-arm64/cni/macvlan
+      - bin/linux-arm64/cni/portmap
+      - bin/linux-arm64/cni/ptp
+      - bin/linux-arm64/cni/sbr
+      - bin/linux-arm64/cni/static
+      - bin/linux-arm64/cni/tap
+      - bin/linux-arm64/cni/tuning
+      - bin/linux-arm64/cni/vlan
+      - bin/linux-arm64/cni/vrf
     replace: true
     mod_timestamp: "{{ .CommitTimestamp }}"
     version: v4
@@ -138,6 +178,10 @@ nfpms:
           mode: 0755
       - src: bin/linux-{{.Arch}}/containerd
         dst: /opt/fun-server/bin/containerd
+        file_info:
+          mode: 0755
+      - src: bin/linux-{{.Arch}}/cni/
+        dst: /opt/fun-server/bin/cni/
         file_info:
           mode: 0755
 

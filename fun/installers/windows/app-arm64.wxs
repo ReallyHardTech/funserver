@@ -20,6 +20,12 @@
           <File Id="Runc" Name="runc" Source="bin/linux-arm64/runc" />
           <File Id="Containerd" Name="containerd" Source="bin/linux-arm64/containerd" />
         </Component>
+        <Directory Id="CNIPlugins" Name="cni">
+          <Component Id="CNIPluginsComponent" Guid="fec7611b-5de8-4002-b5ed-933da722f6c1">
+            <CreateFolder />
+            <!-- CNI plugins will be copied here via goreleaser extra_files -->
+          </Component>
+        </Directory>
         <Directory Id="Scripts" Name="scripts">
           <Component Id="InstallScripts" Guid="c62ad101-799d-41d5-99e4-eab5df1022ce">
             <File Id="InstallPS1" Name="install.ps1" Source="installers/windows/install.ps1" />
@@ -34,6 +40,7 @@
 
     <ComponentGroup Id="ProductComponents">
       <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="CNIPluginsComponent" />
       <ComponentRef Id="InstallScripts" />
     </ComponentGroup>
 

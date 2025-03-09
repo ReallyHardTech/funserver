@@ -20,6 +20,7 @@ const (
 	containerdVersion = "2.0.3"
 	runcVersion       = "1.2.5"
 	linuxkitVersion   = "v1.5.3" // Latest stable version
+	cniVersion        = "1.6.2"  // Latest stable CNI version
 )
 
 var (
@@ -82,6 +83,15 @@ func main() {
 				}
 				os.Chmod(runcBin, 0755)
 				os.Chmod(containerdBin, 0755)
+
+				// Download CNI plugins for Linux
+				cniURL := fmt.Sprintf("https://github.com/containernetworking/plugins/releases/download/v%s/cni-plugins-%s-%s-v%s.tgz",
+					cniVersion, platform, arch, cniVersion)
+				cniDir := filepath.Join(binDir, "cni")
+				err = downloadAndExtractCNI(cniURL, cniDir)
+				if err != nil {
+					log.Fatalf("Fatal: Failed to download CNI plugins for %s/%s: %v\n", platform, arch, err)
+				}
 
 			case "darwin":
 				// Download LinuxKit for macOS
@@ -160,4 +170,59 @@ func downloadFile(url, outputPath string) error {
 
 	_, err = io.Copy(out, resp.Body)
 	return err
+}
+
+func downloadAndExtractCNI(url, outputDir string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("bad status: %s", resp.Status)
+	}
+
+	// Create CNI directory if it doesn't exist
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return err
+	}
+
+	gr, err := gzip.NewReader(resp.Body)
+	if err != nil {
+		return err
+	}
+	defer gr.Close()
+
+	tr := tar.NewReader(gr)
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		// Extract each binary from the archive
+		if header.Typeflag == tar.TypeReg {
+			outPath := filepath.Join(outputDir, filepath.Base(header.Name))
+			out, err := os.Create(outPath)
+			if err != nil {
+				return err
+			}
+
+			if _, err := io.Copy(out, tr); err != nil {
+				out.Close()
+				return err
+			}
+			out.Close()
+
+			// Make the binary executable
+			if err := os.Chmod(outPath, 0755); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
