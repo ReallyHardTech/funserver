@@ -1,0 +1,233 @@
+{
+  "$id": "https://thefunserver.com/funapp.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Fun App Configuration Schema",
+  "description": "Schema for defining applications to be packaged and uploaded to the Fun Server app store",
+  "type": "object",
+  "required": [ "version", "app", "containers" ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "The version of the funapp definition, currently 1.0.0"
+    },
+    "app": {
+      "type": "object",
+      "description": "General application metadata",
+      "required": ["id", "name", "version"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique identifier for the application as a reverse domain name (e.g. com.example.myapp)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the application"
+        },
+        "version": {
+          "type": "string",
+          "description": "The version of the application (semver format)",
+          "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the application"
+        },
+        "author": {
+          "type": "string",
+          "description": "The author of the application"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Path to the application icon"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Tags associated with the application"
+        }
+      }
+    },
+    "volumes": {
+      "type": "object",
+      "description": "Named volumes that can be mounted to containers",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Description of the volume's purpose"
+          }
+        }
+      }
+    },
+    "containers": {
+      "type": "object",
+      "description": "Container definitions for the application",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["image"],
+        "properties": {
+          "image": {
+            "type": "string",
+            "description": "OCI-compatible container image name (e.g. funserver/funapp:1.0.0), limited to images in the funapp container registry, as tags in our registry are immutable and undergo a strict review and approval process. The image must be marked as public or published by the organization publishing this app."
+          },
+          "entrypoint": {
+            "type": ["string", "array"],
+            "description": "Entrypoint for the container",
+            "items": {
+              "type": "string"
+            }
+          },
+          "environment": {
+            "type": "object",
+            "description": "Environment variables for the container, may use available template variables like ${APP_ID} or ${APP_VERSION}",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "ports": {
+            "type": "array",
+            "description": "Ports exposed by the container with visibility and protocol configuration",
+            "items": {
+              "type": "object",
+              "required": ["internal", "external", "protocol", "visibility", "description"],
+              "properties": {
+                "internal": {
+                  "type": "integer",
+                  "description": "Port within the container"
+                },
+                "external": {
+                  "type": "integer",
+                  "description": "Port exposed on the internet, funserver, or private interface"
+                },
+                "protocol": {
+                  "type": "string",
+                  "enum": ["tcp", "udp", "http", "https"],
+                  "description": "Protocol to forward traffic for the port"
+                },
+                "visibility": {
+                  "type": "string",
+                  "enum": ["internet", "funserver", "private"],
+                  "description": "Where the port is exposed: internet (public, via the funtunnel), funserver (other apps in this funserver), or private (only other containers in this app)"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "URL path prefix for HTTP(S) protocols"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description of the service provided on this port"
+                }
+              }
+            }
+          },
+          "volumes": {
+            "type": "array",
+            "description": "Volumes mounted to the container, must be defined in the top level volumes section",
+            "items": {
+              "type": "object",
+              "required": ["target"],
+              "properties": {
+                "target": {
+                  "type": "string",
+                  "description": "Mount point path inside the container"
+                },
+                "readonly": {
+                  "type": "boolean",
+                  "description": "Whether the volume is mounted as read-only",
+                  "default": false
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Description of what this volume is used for"
+                }
+              }
+            }
+          },
+          "restart": {
+            "type": "string",
+            "description": "Container restart policy",
+            "default": "always",
+            "enum": ["no", "always", "on-failure"]
+          },
+          "dependencies": {
+            "type": "array",
+            "description": "Container dependencies, will wait until these containers within this app are running and healthy (if healthcheck is configured) before starting this container",
+            "items": {
+              "type": "string"
+            }
+          },
+          "healthcheck": {
+            "type": "object",
+            "description": "Container health check configuration",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["http", "command"],
+                "description": "Type of health check to perform"
+              },
+              "http": {
+                "type": "object",
+                "description": "HTTP-based health check configuration (used when type is 'http'), any 200-299 response code is considered healthy",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "Path to check (e.g., '/health')"
+                  },
+                  "port": {
+                    "type": "integer",
+                    "description": "Port to connect to (e.g., 8080), does not need to be included in the ports configuration"
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": ["GET", "POST", "HEAD"],
+                    "default": "GET",
+                    "description": "HTTP method to use"
+                  },
+                  "headers": {
+                    "type": "object",
+                    "description": "HTTP headers to include in the request -- be sure not to include any secrets here",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": ["path", "port"]
+              },
+              "command": {
+                "type": ["string", "array"],
+                "description": "Command to run for health check (used when type is 'command'). Exit code 0 is considered healthy.",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": { "type": { "enum": ["http"] } },
+                  "required": ["type"]
+                },
+                "then": {
+                  "required": ["http"]
+                }
+              },
+              {
+                "if": {
+                  "properties": { "type": { "enum": ["command"] } },
+                  "required": ["type"]
+                },
+                "then": {
+                  "required": ["command"]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
